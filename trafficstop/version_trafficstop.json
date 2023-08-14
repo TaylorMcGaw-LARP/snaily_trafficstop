@@ -1,0 +1,6 @@
+{
+    "version": "1.0",
+    "check_url": "https://raw.githubusercontent.com/TaylorMcGaw-LARP/snaily_trafficstop/main/version_trafficstop.json",
+    "download_url": "https://github.com/TaylorMcGaw-LARP/snaily_trafficstop/",
+    "configVersion": "1.0"
+}
