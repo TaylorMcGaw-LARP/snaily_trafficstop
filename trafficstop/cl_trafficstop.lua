@@ -2,7 +2,7 @@
     Sonaran CAD Plugins
 
     Plugin Name: trafficstop
-    Creator: SonoranCAD
+    Creator: snailyCAD
     Description: Implements ts command
 ]]
 local pluginConfig = Config.GetPluginConfig("trafficstop")
