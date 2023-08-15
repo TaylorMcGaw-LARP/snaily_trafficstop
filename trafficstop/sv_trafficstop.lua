@@ -66,8 +66,19 @@ if pluginConfig.enabled then
 		AddEventHandler('snailyCAD::trafficstop:SendTrafficApi', function( targetCoords,caller, address, postal, description, source)
 			-- send an event to be consumed by other resources
 			if Config.apiSendEnabled then
+		
+		
+					for k,v in pairs(GetPlayerIdentifiers(source))do
+						if string.sub(v, 1, string.len("discord:")) == "discord:" then
+							local discord = v:sub(9)
+						performApiGETRequest( 'admin/manage/units/null?discordId='..discord,true, function(resultData)
+						local unitdata = json.decode(resultData)["userOfficers"][1]
+						local datas = { unit = unitdata["id"] }
+						local callsignone = unitdata["callsign1"]
+						local callsign = callsignone ..unitdata["callsign2"]
+			
 				local call = {
-					name = caller, 
+					name = callsign, 
 					location = address, 
 					postal = postal,
 					description  = description,
@@ -80,26 +91,14 @@ if pluginConfig.enabled then
 					situationCode = pluginConfig.situationcodeid
 				}
 				debugLog("sending Traffic Stop!")
-				performApiRequest(call, '911-calls','is-from-dispatch', function(resultData)
+				performApiRequest(call, '911-calls',true, function(resultData)
 					local callnum = json.decode(resultData)["id"]
-					
-					for k,v in pairs(GetPlayerIdentifiers(source))do
-						if string.sub(v, 1, string.len("discord:")) == "discord:" then
-							local discord = v:sub(9)
-							performApiGETRequest( 'admin/manage/units/null?discordId='..discord,true, function(resultData)
-								local units = json.decode(resultData)["userOfficers"][1]["id"]
-								local datas = {
-									unit = units
-								}
-								print(units)
-								performApiRequest(datas, '911-calls/assign/'..callnum,'', function(resultData)
-									local unit = json.decode(resultData)["userOfficers"][1]["id"]
-									
-								end)
-							end)
-						end
-					end
+						performApiRequest(datas, '911-calls/assign/'..callnum,'', function(resultData)
+						end)
 				end)
+						end)
+					end
+				end
 			else
 				debugPrint("[snailyCAD] API sending is disabled. Traffic Stop ignored.")
 			end
