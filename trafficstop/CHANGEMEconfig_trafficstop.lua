@@ -1,5 +1,5 @@
 --[[
-    snaily Plugins
+    Sonoran Plugins
 
     Plugin Configuration
 
@@ -8,7 +8,7 @@
 config = {
     enabled = true,
     pluginName = "trafficstop", -- name your plugin here
-    pluginAuthor = "snailyCAD", -- author
+    pluginAuthor = "SonoranCAD", -- author
     configVersion = "1.0",
 
     -- put your configuration options below
