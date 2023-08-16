@@ -16,41 +16,51 @@ if pluginConfig.enabled then
 			local player = source
 			local ped = GetPlayerPed(player)
 			local playerCoords = GetEntityCoords(ped)
-			local code =  pluginConfig.code
-			local caller = nil
+			
 			address = address:gsub('%b[]', '')
 			-- Checking if there are any description arguments.
+			
 			if args[1] then
 				local description = table.concat(args, " ")
 				if type == "ts" then
 					description = "Traffic Stop - "..description
+
 					if isPluginLoaded("wraithv2") and wraithLastPlates ~= nil then
 						if wraithLastPlates.locked ~= nil then
 							local plate = wraithLastPlates.locked.plate:gsub("%s+","")
-							description = description..(" PLATE: %s"):format(plate)
+							local platedata = {
+								plateOrVin = plate
+							}
+							performApiRequest(platedata,'search/vehicle?includeMany=true','is-from-dispatch', function(result)  
+								local reg = false
+								reg = json.decode(result)[1]
+								if reg then
+									TriggerEvent("snailyCAD::wraithv2:PlateLocked", source, reg, cam, plate, index)
+									local plate = reg.plate
+									local vin = reg.vinNumber
+									local color = reg.color
+									local registrationStatus = reg.registrationStatus.value
+									local owner = ("%s %s"):format(reg.citizen.name, reg.citizen.surname)
+									description = description..(" \nPLATE: %s \nOWNER: %s  \nSTATUS: %s"):format(plate,owner,registrationStatus)
+								end
+							end)
+
 						end
 					end
-				end
-				if isPluginLoaded("frameworksupport") then
-					-- Getting the ESX Identity Name
-					GetIdentity(source, function(identity)
-						if identity.name ~= nil then
-							caller = identity.name
-						else
-							caller = GetPlayerName(source)
-							debugLog("Unable to get player name from ESX. Falled back to in-game name.")
-						end
-					end)
-					while caller == nil do
-						Wait(10)
-					end
-				else
-					caller = GetPlayerName(source) 
 				end
 				-- Sending the API event
-				TriggerEvent('snailyCAD::trafficstop:SendTrafficApi',playerCoords, caller,address, postal, description, source)
+				for k,v in pairs(GetPlayerIdentifiers(source))do
+					if string.sub(v, 1, string.len("discord:")) == "discord:" then
+						local discord = v:sub(9)
+						performApiGETRequest( 'admin/manage/units/null?discordId='..discord,true, function(resultData)
+							local user = json.decode(resultData)["userOfficers"][1]
+							TriggerEvent('snailyCAD::trafficstop:SendTrafficApi',playerCoords,user,address, postal, description, source)
 				-- Sending the user a message stating the call has been sent
 				TriggerClientEvent("chat:addMessage", source, {args = {"^0^5^*[snailyCAD]^r ", "^7Details regarding you traffic Stop have been added to CAD"}})
+						end)
+					end
+				end
+				
 			else
 				-- Throwing an error message due to now call description stated
 				TriggerClientEvent("chat:addMessage", source, {args = {"^0[ ^1Error ^0] ", "You need to specify Traffic Stop details (IE: vehicle Description)."}})
@@ -63,44 +73,38 @@ if pluginConfig.enabled then
 	
 		-- Client TraficStop request
 		RegisterServerEvent('snailyCAD::trafficstop:SendTrafficApi')
-		AddEventHandler('snailyCAD::trafficstop:SendTrafficApi', function( targetCoords,caller, address, postal, description, source)
+		AddEventHandler('snailyCAD::trafficstop:SendTrafficApi', function( targetCoords,user, address, postal, description, source)
 			-- send an event to be consumed by other resources
 			if Config.apiSendEnabled then
-		
-		
-					for k,v in pairs(GetPlayerIdentifiers(source))do
-						if string.sub(v, 1, string.len("discord:")) == "discord:" then
-							local discord = v:sub(9)
-						performApiGETRequest( 'admin/manage/units/null?discordId='..discord,true, function(resultData)
-						local unitdata = json.decode(resultData)["userOfficers"][1]
-						local datas = { unit = unitdata["id"] }
-						local callsignone = unitdata["callsign1"]
-						local callsign = callsignone ..unitdata["callsign2"]
+				
 			
-				local call = {
-					name = callsign, 
-					location = address, 
-					postal = postal,
-					description  = description,
-					gtaMapPosition  = {
-						x = targetCoords.x,
-						y = targetCoords.y,
-						z = targetCoords.z,
-						heading = 0
-					},
-					situationCode = pluginConfig.situationcodeid
-				}
-				debugLog("sending Traffic Stop!")
-				performApiRequest(call, '911-calls',true, function(resultData)
-					local callnum = json.decode(resultData)["id"]
-						performApiRequest(datas, '911-calls/assign/'..callnum,'', function(resultData)
-						end)
-				end)
-						end)
-					end
-				end
+							local datas = { unit = user["id"] }
+							local callsignone = user["callsign"]
+							local callsign = callsignone ..user["callsign2"]
+				
+							local calls = {
+								name = callsign, 
+								location = address, 
+								postal = postal,
+								description  = description,
+								gtaMapPosition  = {
+									x = targetCoords.x,
+									y = targetCoords.y,
+									z = targetCoords.z,
+									heading = 0
+								},
+								situationCode = pluginConfig.situationcodeid
+							}
+							debugLog("sending Traffic Stop!")
+							performApiRequest(calls, '911-calls','true', function(resulta)
+								local callnum = json.decode(resulta)["id"]
+								local unitid = { unit = user["id"] }
+							
+								performApiRequest(unitid, '911-calls/assign/'..callnum,'false', function(resultData) end)
+							end)
+					
 			else
 				debugPrint("[snailyCAD] API sending is disabled. Traffic Stop ignored.")
 			end
 		end)
-	end
+end
