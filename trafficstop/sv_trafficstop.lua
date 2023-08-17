@@ -49,10 +49,15 @@ if pluginConfig.enabled then
 					end
 				end
 				-- Sending the API event
+				local primaryid = nil
 				for k,v in pairs(GetPlayerIdentifiers(source))do
 					if string.sub(v, 1, string.len(Config.primaryIdentifier..":")) == Config.primaryIdentifier..":" then
-						local primaryid = v:sub(9)
-						performApiGETRequest( 'admin/manage/units/null?'..Config.primaryIdentifier..'='..primaryid,true, function(resultData)
+						if Config.primaryIdentifier == "discord" then
+							primaryid = v:sub(9)
+						elseif Config.primaryIdentifier == "steam" then
+							primaryid = tonumber(v:sub(7),16)	
+						end
+						performApiGETRequest( 'admin/manage/units/null?'..Config.primaryIdentifier..'Id='..primaryid,true, function(resultData)
 							local user = json.decode(resultData)["userOfficers"][1]
 							TriggerEvent('snailyCAD::trafficstop:SendTrafficApi',playerCoords,user,address, postal, description, source)
 				-- Sending the user a message stating the call has been sent
